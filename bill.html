@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8">
+<title>Volt Vision Electric - Bill Generator</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+</head>
+
+
+<body class="bg-gray-100 p-10">
+
+<h1 class="text-3xl font-bold text-center mb-8">
+Volt Vision Electric Billing System
+</h1>
+
+
+<!-- CUSTOMER DETAILS -->
+
+<div class="grid grid-cols-2 gap-4 mb-6 max-w-4xl mx-auto">
+
+<input id="customer" placeholder="Customer Name"
+class="border p-2 rounded">
+
+<input id="date" type="date"
+class="border p-2 rounded">
+
+</div>
+
+
+
+<!-- ITEMS TABLE -->
+
+<div class="max-w-4xl mx-auto">
+
+<table class="w-full border bg-white">
+
+<thead class="bg-blue-900 text-white">
+
+<tr>
+<th class="p-2">Item</th>
+<th class="p-2">Quantity</th>
+<th class="p-2">Unit Price</th>
+<th class="p-2">Total</th>
+</tr>
+
+</thead>
+
+<tbody id="itemsBody">
+
+<tr>
+<td><input class="item border p-2 w-full"></td>
+<td><input type="number" class="qty border p-2 w-full"></td>
+<td><input type="number" class="price border p-2 w-full"></td>
+<td class="text-center">0</td>
+</tr>
+
+</tbody>
+
+</table>
+
+
+<button onclick="addRow()"
+class="mt-4 bg-blue-800 text-white px-4 py-2 rounded">
+Add Item
+</button>
+
+</div>
+
+
+
+<!-- BUTTONS -->
+
+<div class="text-center mt-8">
+
+<button onclick="generateBill()"
+class="bg-green-700 text-white px-6 py-2 rounded">
+Generate Bill
+</button>
+
+<button id="downloadBtn"
+onclick="downloadPDF()"
+disabled
+class="bg-gray-400 text-white px-6 py-2 rounded ml-4">
+Download PDF
+</button>
+
+</div>
+
+
+
+<!-- SUCCESS MESSAGE -->
+
+<div id="successMsg"
+class="fixed bottom-5 right-5 bg-green-600 text-white px-6 py-3 rounded shadow hidden">
+
+Bill Generated Successfully
+
+</div>
+
+
+
+<!-- BILL PREVIEW -->
+
+<div id="bill"
+class="bg-white shadow mx-auto flex flex-col mt-10"
+style="width:800px; min-height:1100px;">
+
+<!-- HEADER -->
+
+<img src="assets/header.png" style="width:100%">
+
+
+
+<!-- BILL CONTENT -->
+
+<div class="p-10 flex-grow">
+
+<p><b>Customer:</b> <span id="billCustomer"></span></p>
+
+<p><b>Date:</b> <span id="billDate"></span></p>
+
+<p><b>Invoice:</b> <span id="billInvoice"></span></p>
+
+
+
+<table class="w-full mt-6 border">
+
+<thead class="bg-gray-200">
+
+<tr>
+<th class="border p-2">Item</th>
+<th class="border p-2">Qty</th>
+<th class="border p-2">Unit Price</th>
+<th class="border p-2">Total</th>
+</tr>
+
+</thead>
+
+<tbody id="billItems"></tbody>
+
+</table>
+
+
+
+<h2 class="text-right text-xl font-bold mt-6">
+Grand Total: ₹ <span id="grandTotal"></span>
+</h2>
+
+</div>
+
+
+
+<!-- FOOTER -->
+
+<img src="assets/footer.png" style="width:100%">
+
+</div>
+
+
+
+<script>
+
+
+function addRow(){
+
+let row = `
+<tr>
+<td><input class="item border p-2 w-full"></td>
+<td><input type="number" class="qty border p-2 w-full"></td>
+<td><input type="number" class="price border p-2 w-full"></td>
+<td class="text-center">0</td>
+</tr>
+`
+
+document.getElementById("itemsBody")
+.insertAdjacentHTML("beforeend",row)
+
+}
+
+
+
+function generateBill(){
+
+let customer =
+document.getElementById("customer").value
+
+let date =
+document.getElementById("date").value
+
+
+
+/* AUTO INVOICE NUMBER */
+
+let first3 = customer.substring(0,3).toUpperCase()
+
+let now = new Date()
+
+let day = String(now.getDate()).padStart(2,'0')
+let month = String(now.getMonth()+1).padStart(2,'0')
+let year = now.getFullYear()
+
+let hours = String(now.getHours()).padStart(2,'0')
+let minutes = String(now.getMinutes()).padStart(2,'0')
+let seconds = String(now.getSeconds()).padStart(2,'0')
+
+let invoice =
+first3 + day + month + year + hours + minutes + seconds
+
+
+
+document.getElementById("billCustomer").innerText = customer
+document.getElementById("billDate").innerText = date
+document.getElementById("billInvoice").innerText = invoice
+
+
+
+let items = document.querySelectorAll(".item")
+let qty = document.querySelectorAll(".qty")
+let price = document.querySelectorAll(".price")
+
+let billHTML = ""
+let grandTotal = 0
+
+
+
+for(let i=0;i<items.length;i++){
+
+let item = items[i].value
+
+let q = parseFloat(qty[i].value || 0)
+
+let p = parseFloat(price[i].value || 0)
+
+let total = q * p
+
+grandTotal += total
+
+
+billHTML += `
+<tr>
+<td class="border p-2">${item}</td>
+<td class="border p-2">${q}</td>
+<td class="border p-2">${p}</td>
+<td class="border p-2">${total}</td>
+</tr>
+`
+
+}
+
+
+
+document.getElementById("billItems").innerHTML = billHTML
+
+document.getElementById("grandTotal").innerText = grandTotal
+
+
+
+/* ENABLE DOWNLOAD */
+
+let btn = document.getElementById("downloadBtn")
+
+btn.disabled = false
+
+btn.classList.remove("bg-gray-400")
+
+btn.classList.add("bg-blue-900")
+
+
+
+/* SUCCESS MESSAGE */
+
+let msg = document.getElementById("successMsg")
+
+msg.classList.remove("hidden")
+
+setTimeout(()=>{
+
+msg.classList.add("hidden")
+
+},6000)
+
+}
+
+
+
+async function downloadPDF(){
+
+const { jsPDF } = window.jspdf
+
+let bill = document.getElementById("bill")
+
+await new Promise(r => setTimeout(r,500))
+
+let canvas = await html2canvas(bill,{
+scale:3,
+useCORS:true
+})
+
+let img = canvas.toDataURL("image/png")
+
+let pdf = new jsPDF('p','mm','a4')
+
+let width = pdf.internal.pageSize.getWidth()
+
+let height = canvas.height * width / canvas.width
+
+pdf.addImage(img,'PNG',0,0,width,height)
+
+pdf.save("VoltVisionElectricInvoice.pdf")
+
+}
+
+</script>
+
+
+</body>
+</html>
